@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/Sate.csproj" />
+  <Project Path="test/Sate.Test.csproj" />
+  <Project Path="test-all/Sate.TestAll.csproj" />
+  <Project Path="bench/Sate.Benchmark.csproj" />
+</Solution>

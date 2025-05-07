@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="TestDir\Dummy.ts.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="TestDir\Dummy.ts.sql" />
+    <AdditionalFiles Include="TestDir\SubDir\Dummy.ts.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\Sate.csproj">
+      <OutputItemType>Analyzer</OutputItemType>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+
+</Project>
