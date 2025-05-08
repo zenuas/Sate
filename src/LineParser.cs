@@ -15,6 +15,12 @@ public static class LineParser
     public static Regex ForJoinStatement = new(@"^\s*/\*\s*FOR\s+(.+)\s+JOIN\s+(.+)\*/\s*$", RegexOptions.IgnoreCase);
     public static Regex EndStatement = new(@"^\s*/\*\s*END\s*\*/\s*$", RegexOptions.IgnoreCase);
 
+    public static HashSet<string> ReservedString { get; } = new()
+        {
+            { "null" },
+            { "is" },
+        };
+
     public static IEnumerable<IBlock> ParseTopLevel(string[] lines)
     {
         var body = new List<string>();
@@ -209,6 +215,8 @@ public static class LineParser
     {
         while (start < line.Length && char.IsWhiteSpace(line[start])) start++;
 
+        if (start >= line.Length) throw new Exception("expression not found");
+
         throw new Exception("not implemented");
     }
 
@@ -244,8 +252,39 @@ public static class LineParser
         return 0;
     }
 
+    public static int TryParseVariable(string line, int start, out string name)
+    {
+        name = "";
+        if (start >= line.Length) return 0;
+
+        var len = 0;
+        if (IsVariablePrefix(line[start])) len++;
+        while (start + len < line.Length && line[start + len] == '_') len++;
+
+        if (start + len >= line.Length) return 0;
+        if (!IsVariableFirst(line[start + len])) return 0;
+
+        while (start + len < line.Length && IsVariable(line[start + len])) len++;
+
+        name = line.Substring(start, len);
+        return len;
+    }
+
     public static bool IsNumber(char c) =>
         c >= '0' && c <= '9';
+
+    public static bool IsVariableFirst(char c) =>
+        (c >= 'a' && c <= 'z') ||
+        (c >= 'A' && c <= 'Z');
+
+    public static bool IsVariable(char c) =>
+        IsVariableFirst(c) ||
+        IsNumber(c) ||
+        c == '_';
+
+    public static bool IsVariablePrefix(char c) =>
+        c == '@' ||
+        c == ':';
 
     public static bool IsUnaryOperator(char c) =>
         c == '+' ||
