@@ -270,6 +270,24 @@ public static class LineParser
         return len;
     }
 
+    public static int TryParseNumber(string line, int start, out int num)
+    {
+        num = 0;
+        if (start >= line.Length || !IsNumber(line[start])) return 0;
+
+        var len = 0;
+        while (start + len < line.Length)
+        {
+            var c = line[start + len++];
+
+            if (c == '_') continue;
+            if (!IsNumber(c)) { len--; break; }
+
+            num = (num * 10) + (c - '0');
+        }
+        return len;
+    }
+
     public static bool IsNumber(char c) =>
         c >= '0' && c <= '9';
 
