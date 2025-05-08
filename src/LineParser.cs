@@ -278,11 +278,12 @@ public static class LineParser
         var len = 0;
         while (start + len < line.Length)
         {
-            var c = line[start + len++];
+            var c = line[start + len];
 
-            if (c == '_') continue;
-            if (!IsNumber(c)) { len--; break; }
+            if (c == '_') { len++; continue; }
+            if (!IsNumber(c)) break;
 
+            len++;
             num = (num * 10) + (c - '0');
         }
         return len;
