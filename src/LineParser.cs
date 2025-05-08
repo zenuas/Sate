@@ -17,8 +17,8 @@ public static class LineParser
 
     public static HashSet<string> ReservedString { get; } = new()
         {
-            { "null" },
-            { "is" },
+            { "OR" },
+            { "AND" },
         };
 
     public static IEnumerable<IBlock> ParseTopLevel(string[] lines)
@@ -211,13 +211,97 @@ public static class LineParser
         throw new Exception("end statement not found");
     }
 
-    public static Node ParseExpression(string line, int start = 0)
+    public static (int Length, Node Node) ParseExpression(string line, int start = 0, bool is_parentheses = false)
     {
-        while (start < line.Length && char.IsWhiteSpace(line[start])) start++;
+        var token = ReadNextToken(line, start);
+        var len = token.Length;
 
-        if (start >= line.Length) throw new Exception("expression not found");
+        if (token.Node.Operand == Operands.None) throw new Exception("expression not found");
+        if (token.Node.Operand == Operands.RightParenthesis) throw new Exception("unexpected expression )");
 
-        throw new Exception("not implemented");
+        var left = token.Node;
+        if (token.Node.Operand == Operands.LeftParenthesis)
+        {
+            var expr = ParseExpression(line, start + len, true);
+            len += expr.Length;
+            token.Node.Left = expr.Node;
+        }
+        else if (token.Node.Operand == Operands.Operand)
+        {
+            if (!IsUnaryOperator(token.Node.Value.ToString())) throw new Exception($"unexpected operator {token.Node.Value}");
+            var expr = ParseExpression(line, start + len, is_parentheses);
+            if (expr.Node.Operand == Operands.Operand && expr.Node.Right is { })
+            {
+                token.Node.Left = expr.Node.Left;
+                expr.Node.Left = token.Node;
+                return (len + expr.Length, expr.Node);
+            }
+            else
+            {
+                token.Node.Left = expr.Node;
+                return (len + expr.Length, token.Node);
+            }
+        }
+
+        var ope = ReadNextToken(line, start + len);
+        len += ope.Length;
+        if ((!is_parentheses && ope.Node.Operand == Operands.None) ||
+            (is_parentheses && ope.Node.Operand == Operands.RightParenthesis)) return (len, left);
+        if (ope.Node.Operand != Operands.Operand) throw new Exception($"unexpected operator {ope.Node.Value}");
+
+        ope.Node.Left = left;
+        var right = ParseExpression(line, start + len, is_parentheses);
+        len += right.Length;
+        if (right.Node.Operand == Operands.Operand &&
+            right.Node.Right is { } &&
+            GetOperatorPriority(ope.Node.Value.ToString()) >= GetOperatorPriority(right.Node.Value.ToString()))
+        {
+            ope.Node.Right = right.Node.Left;
+            right.Node.Left = ope.Node;
+            ope.Node = right.Node;
+        }
+        else
+        {
+            ope.Node.Right = right.Node;
+        }
+
+        if (!is_parentheses)
+        {
+            var end = ReadNextToken(line, start + len + right.Length);
+            if (end.Node.Operand != Operands.None) throw new Exception($"unexpected expression {end.Node.Value}");
+            return (len + end.Length, ope.Node);
+        }
+        return (len, ope.Node);
+    }
+
+    public static (int Length, Node Node) ReadNextToken(string line, int start)
+    {
+        var len = 0;
+        while (start + len < line.Length && char.IsWhiteSpace(line[start + len])) len++;
+
+        if (start + len < line.Length && line[start + len] == '(') return (len + 1, new(Operands.LeftParenthesis, "("));
+
+        if (start + len < line.Length && line[start + len] == ')') return (len + 1, new(Operands.RightParenthesis, ")"));
+
+        var ope_len = TryParseOperator(line, start + len, out var ope);
+        if (ope_len > 0) return (len + ope_len, new(Operands.Operand, ope));
+
+        var var_len = TryParseVariable(line, start + len, out var name);
+        if (var_len > 0)
+        {
+            var upper = name.ToUpper();
+            return (
+                len + var_len,
+                ReservedString.Contains(upper) ?
+                    new(Operands.Operand, upper) :
+                    new(Operands.Variable, name)
+            );
+        }
+
+        var num_len = TryParseNumber(line, start + len, out var num);
+        if (num_len > 0) return (len + num_len, new(Operands.Number, num));
+
+        return (len, new(Operands.None, "EOL"));
     }
 
     public static int TryParseOperator(string line, int start, out string ope)
@@ -305,6 +389,8 @@ public static class LineParser
         c == '@' ||
         c == ':';
 
+    public static bool IsUnaryOperator(string s) => s.Length == 1 && IsUnaryOperator(s[0]);
+
     public static bool IsUnaryOperator(char c) =>
         c == '+' ||
         c == '-';
@@ -321,6 +407,22 @@ public static class LineParser
         c == '*' ||
         c == '/' ||
         c == '%';
+
+    public static int GetOperatorPriority(string ope) =>
+        ope == "OR" ? 1 :
+        ope == "AND" ? 2 :
+        ope == "==" ? 3 :
+        ope == "!=" ? 3 :
+        ope == "<" ? 4 :
+        ope == ">" ? 4 :
+        ope == "<=" ? 4 :
+        ope == ">=" ? 4 :
+        ope == "+" ? 5 :
+        ope == "-" ? 5 :
+        ope == "*" ? 6 :
+        ope == "/" ? 6 :
+        ope == "%" ? 6 :
+        throw new Exception($"unexpected operator {ope}");
 
     public static bool IsComparisonOperator(char c) =>
         c == '>' ||
