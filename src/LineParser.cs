@@ -213,65 +213,56 @@ public static class LineParser
 
     public static (int Length, Node Node) ParseExpression(string line, int start = 0, bool is_parentheses = false)
     {
+        var (len, left) = ParseOneExpression(line, start);
+        var next = ParseOperandExpression(line, start + len, left, is_parentheses);
+        return (len + next.Length, next.Node);
+    }
+
+    public static (int Length, Node Node) ParseOperandExpression(string line, int start, Node left, bool is_parentheses)
+    {
+        var (len, ope) = ReadNextToken(line, start);
+        if ((!is_parentheses && ope.Operand == Operands.None) ||
+            (is_parentheses && ope.Operand == Operands.RightParenthesis)) return (len, left);
+        if (ope.Operand != Operands.Operand) throw new Exception($"unexpected operator {ope.Value}");
+
+        ope.Left = left;
+        var right = ParseOneExpression(line, start + len);
+        len += right.Length;
+        ope.Right = right.Node;
+
+        if (left.Operand == Operands.Operand &&
+            GetOperatorPriority(left.Value.ToString()) < GetOperatorPriority(ope.Value.ToString()))
+        {
+            ope.Left = left.Right;
+            left.Right = ope;
+            ope = left;
+        }
+
+        var next = ParseOperandExpression(line, start + len, ope, is_parentheses);
+        return (len + next.Length, next.Node);
+    }
+
+    public static (int Length, Node Node) ParseOneExpression(string line, int start)
+    {
         var token = ReadNextToken(line, start);
-        var len = token.Length;
 
         if (token.Node.Operand == Operands.None) throw new Exception("expression not found");
         if (token.Node.Operand == Operands.RightParenthesis) throw new Exception("unexpected expression )");
 
-        var left = token.Node;
         if (token.Node.Operand == Operands.LeftParenthesis)
         {
-            var expr = ParseExpression(line, start + len, true);
-            len += expr.Length;
+            var expr = ParseExpression(line, start + token.Length, true);
             token.Node.Left = expr.Node;
+            return (token.Length + expr.Length, token.Node);
         }
         else if (token.Node.Operand == Operands.Operand)
         {
             if (!IsUnaryOperator(token.Node.Value.ToString())) throw new Exception($"unexpected operator {token.Node.Value}");
-            var expr = ParseExpression(line, start + len, is_parentheses);
-            if (expr.Node.Operand == Operands.Operand && expr.Node.Right is { })
-            {
-                token.Node.Left = expr.Node.Left;
-                expr.Node.Left = token.Node;
-                return (len + expr.Length, expr.Node);
-            }
-            else
-            {
-                token.Node.Left = expr.Node;
-                return (len + expr.Length, token.Node);
-            }
+            var expr = ParseOneExpression(line, start + token.Length);
+            token.Node.Left = expr.Node;
+            return (token.Length + expr.Length, token.Node);
         }
-
-        var ope = ReadNextToken(line, start + len);
-        len += ope.Length;
-        if ((!is_parentheses && ope.Node.Operand == Operands.None) ||
-            (is_parentheses && ope.Node.Operand == Operands.RightParenthesis)) return (len, left);
-        if (ope.Node.Operand != Operands.Operand) throw new Exception($"unexpected operator {ope.Node.Value}");
-
-        ope.Node.Left = left;
-        var right = ParseExpression(line, start + len, is_parentheses);
-        len += right.Length;
-        if (right.Node.Operand == Operands.Operand &&
-            right.Node.Right is { } &&
-            GetOperatorPriority(ope.Node.Value.ToString()) >= GetOperatorPriority(right.Node.Value.ToString()))
-        {
-            ope.Node.Right = right.Node.Left;
-            right.Node.Left = ope.Node;
-            ope.Node = right.Node;
-        }
-        else
-        {
-            ope.Node.Right = right.Node;
-        }
-
-        if (!is_parentheses)
-        {
-            var end = ReadNextToken(line, start + len + right.Length);
-            if (end.Node.Operand != Operands.None) throw new Exception($"unexpected expression {end.Node.Value}");
-            return (len + end.Length, ope.Node);
-        }
-        return (len, ope.Node);
+        return (token.Length, token.Node);
     }
 
     public static (int Length, Node Node) ReadNextToken(string line, int start)
