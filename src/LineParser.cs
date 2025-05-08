@@ -1,4 +1,5 @@
 ﻿using Sate.Block;
+using Sate.Expression;
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -203,4 +204,67 @@ public static class LineParser
         }
         throw new Exception("end statement not found");
     }
+
+    public static Node ParseExpression(string line, int start = 0)
+    {
+        while (start < line.Length && char.IsWhiteSpace(line[start])) start++;
+
+        throw new Exception("not implemented");
+    }
+
+    public static int TryParseOperator(string line, int start, out string ope)
+    {
+        ope = "";
+        if (start >= line.Length) return 0;
+
+        var c = line[start];
+        if (IsEqualOperator(c) || IsNotOperator(c))
+        {
+            // == or !=
+            if (start + 1 >= line.Length || !IsEqualOperator(line[start + 1])) throw new Exception($"unexpected operator {c}");
+            ope = line.Substring(start, 2);
+            return 2;
+        }
+        else if (IsComparisonOperator(c))
+        {
+            // <= or >=
+            if (start + 1 < line.Length && IsEqualOperator(line[start + 1]))
+            {
+                ope = line.Substring(start, 2);
+                return 2;
+            }
+            ope = c.ToString();
+            return 1;
+        }
+        else if (IsOperator(c))
+        {
+            ope = c.ToString();
+            return 1;
+        }
+        return 0;
+    }
+
+    public static bool IsNumber(char c) =>
+        c >= '0' && c <= '9';
+
+    public static bool IsUnaryOperator(char c) =>
+        c == '+' ||
+        c == '-';
+
+    public static bool IsEqualOperator(char c) =>
+        c == '=';
+
+    public static bool IsNotOperator(char c) =>
+        c == '!';
+
+    public static bool IsOperator(char c) =>
+        c == '+' ||
+        c == '-' ||
+        c == '*' ||
+        c == '/' ||
+        c == '%';
+
+    public static bool IsComparisonOperator(char c) =>
+        c == '>' ||
+        c == '<';
 }
