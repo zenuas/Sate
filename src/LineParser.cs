@@ -235,7 +235,6 @@ public static class LineParser
         {
             ope.Left = left.Right;
             var next = ParseOperandExpression(line, start + len, ope, is_parentheses);
-            left.Right = next.Node;
             len += next.Length;
 
             if (next.Node.Operand == Operands.Operand &&
@@ -246,6 +245,7 @@ public static class LineParser
                 next.Node.Left = left;
                 return (len, next.Node);
             }
+            left.Right = next.Node;
             return (len, left);
         }
         else
