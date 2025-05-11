@@ -11,8 +11,8 @@ public class Node(Operands ope, object value)
     public Node? Right { get; set; }
 
     public override string ToString() =>
-        Right is { } ? $"{Left}  {Value}:{Operand}  {Right}" :
+        Right is { } ? $"( {Left}  {Value}  {Right} )" :
         Operand == Operands.LeftParenthesis ? $"( {Left} )" :
-        Left is { } ? $"{Value}:{Operand}  {Left}" :
+        Left is { } ? $"( {Value}  {Left} )" :
         $"{Value}";
 }
