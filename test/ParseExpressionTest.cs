@@ -276,6 +276,70 @@ public class ParseExpressionTest
     }
 
     [Fact]
+    public void AndOrOrTest()
+    {
+        var (len, node) = LineParser.ParseExpression("a<1 and b>2 or c>=3 or d<=4");
+        Assert.Equal(len, 27);
+        Assert.Equivalent(node,
+            new Node(Operands.Operand, "OR")
+            {
+                Left = new(Operands.Operand, "AND")
+                {
+                    Left = new(Operands.Operand, "<") { Left = new(Operands.Variable, "a"), Right = new(Operands.Number, 1) },
+                    Right = new(Operands.Operand, ">") { Left = new(Operands.Variable, "b"), Right = new(Operands.Number, 2) }
+                },
+                Right = new(Operands.Operand, "OR")
+                {
+                    Left = new(Operands.Operand, ">=") { Left = new(Operands.Variable, "c"), Right = new(Operands.Number, 3) },
+                    Right = new(Operands.Operand, "<=") { Left = new(Operands.Variable, "d"), Right = new(Operands.Number, 4) }
+                }
+            });
+    }
+
+    [Fact]
+    public void OrOrAndTest()
+    {
+        var (len, node) = LineParser.ParseExpression("a<1 or b>2 or c>=3 and d<=4");
+        Assert.Equal(len, 27);
+        Assert.Equivalent(node,
+            new Node(Operands.Operand, "OR")
+            {
+                Left = new(Operands.Operand, "<") { Left = new(Operands.Variable, "a"), Right = new(Operands.Number, 1) },
+                Right = new(Operands.Operand, "OR")
+                {
+                    Left = new(Operands.Operand, ">") { Left = new(Operands.Variable, "b"), Right = new(Operands.Number, 2) },
+                    Right = new(Operands.Operand, "AND")
+                    {
+                        Left = new(Operands.Operand, ">=") { Left = new(Operands.Variable, "c"), Right = new(Operands.Number, 3) },
+                        Right = new(Operands.Operand, "<=") { Left = new(Operands.Variable, "d"), Right = new(Operands.Number, 4) }
+                    }
+
+                }
+            });
+    }
+
+    [Fact]
+    public void OrAndOrTest()
+    {
+        var (len, node) = LineParser.ParseExpression("a<1 or b>2 and c>=3 or d<=4");
+        Assert.Equal(len, 27);
+        Assert.Equivalent(node,
+            new Node(Operands.Operand, "OR")
+            {
+                Left = new(Operands.Operand, "<") { Left = new(Operands.Variable, "a"), Right = new(Operands.Number, 1) },
+                Right = new(Operands.Operand, "OR")
+                {
+                    Left = new(Operands.Operand, "AND")
+                    {
+                        Left = new(Operands.Operand, ">") { Left = new(Operands.Variable, "b"), Right = new(Operands.Number, 2) },
+                        Right = new(Operands.Operand, ">=") { Left = new(Operands.Variable, "c"), Right = new(Operands.Number, 3) }
+                    },
+                    Right = new(Operands.Operand, "<=") { Left = new(Operands.Variable, "d"), Right = new(Operands.Number, 4) }
+                }
+            });
+    }
+
+    [Fact]
     public void MulAddDivTest()
     {
         var (len, node) = LineParser.ParseExpression("1*2+3/4");
