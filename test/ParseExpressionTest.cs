@@ -276,6 +276,48 @@ public class ParseExpressionTest
     }
 
     [Fact]
+    public void MulAddDivTest()
+    {
+        var (len, node) = LineParser.ParseExpression("1*2+3/4");
+        Assert.Equal(len, 7);
+        Assert.Equivalent(node,
+            new Node(Operands.Operand, "+")
+            {
+                Left = new(Operands.Operand, "*")
+                {
+                    Left = new(Operands.Number, 1),
+                    Right = new(Operands.Number, 2)
+                },
+                Right = new(Operands.Operand, "/")
+                {
+                    Left = new(Operands.Number, 3),
+                    Right = new(Operands.Number, 4)
+                }
+            });
+    }
+
+    [Fact]
+    public void AddMulSubTest()
+    {
+        var (len, node) = LineParser.ParseExpression("1+2*3-4");
+        Assert.Equal(len, 7);
+        Assert.Equivalent(node,
+            new Node(Operands.Operand, "+")
+            {
+                Left = new(Operands.Number, 1),
+                Right = new(Operands.Operand, "-")
+                {
+                    Left = new(Operands.Operand, "*")
+                    {
+                        Left = new(Operands.Number, 2),
+                        Right = new(Operands.Number, 3)
+                    },
+                    Right = new(Operands.Number, 4)
+                },
+            });
+    }
+
+    [Fact]
     public void ErrorTest()
     {
         Assert.Equal(Assert.Throws<Exception>(() => LineParser.ParseExpression("*a")).Message, "unexpected operator *");

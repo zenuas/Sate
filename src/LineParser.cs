@@ -234,12 +234,26 @@ public static class LineParser
             GetOperatorPriority(left.Value.ToString()) < GetOperatorPriority(ope.Value.ToString()))
         {
             ope.Left = left.Right;
-            left.Right = ope;
-            ope = left;
+            var next = ParseOperandExpression(line, start + len, ope, is_parentheses);
+            left.Right = next.Node;
+            len += next.Length;
+
+            if (next.Node.Operand == Operands.Operand &&
+                GetOperatorPriority(left.Value.ToString()) > GetOperatorPriority(next.Node.Value.ToString()))
+            {
+                // "A and B or C and D" => A and (B or (C and D)) => (A and B) or (C and D)
+                left.Right = next.Node.Left;
+                next.Node.Left = left;
+                return (len, next.Node);
+            }
+            return (len, left);
+        }
+        else
+        {
+            var next = ParseOperandExpression(line, start + len, ope, is_parentheses);
+            return (len + next.Length, next.Node);
         }
 
-        var next = ParseOperandExpression(line, start + len, ope, is_parentheses);
-        return (len + next.Length, next.Node);
     }
 
     public static (int Length, Node Node) ParseOneExpression(string line, int start)
