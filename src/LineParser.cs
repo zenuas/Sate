@@ -231,6 +231,7 @@ public static class LineParser
         ope.Right = right.Node;
 
         if (left.Operand == Operands.Operand &&
+            !IsUnaryOperator(left) &&
             GetOperatorPriority(left.Value.ToString()) < GetOperatorPriority(ope.Value.ToString()))
         {
             ope.Left = left.Right;
@@ -273,7 +274,7 @@ public static class LineParser
         {
             if (!IsUnaryOperator(token.Node.Value.ToString())) throw new Exception($"unexpected operator {token.Node.Value}");
             var expr = ParseOneExpression(line, start + token.Length);
-            token.Node.Left = expr.Node;
+            token.Node.Right = expr.Node;
             return (token.Length + expr.Length, token.Node);
         }
         return (token.Length, token.Node);
@@ -393,6 +394,8 @@ public static class LineParser
     public static bool IsVariablePrefix(char c) =>
         c == '@' ||
         c == ':';
+
+    public static bool IsUnaryOperator(Node node) => node.Operand == Operands.Operand && IsUnaryOperator(node.Value.ToString()) && node.Left is null;
 
     public static bool IsUnaryOperator(string s) => s.Length == 1 && IsUnaryOperator(s[0]);
 

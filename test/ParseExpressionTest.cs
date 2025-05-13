@@ -160,12 +160,12 @@ public class ParseExpressionTest
         Assert.Equivalent(node,
             new Node(Operands.Operand, "+")
             {
-                Left = new(Operands.Variable, "a")
+                Right = new(Operands.Variable, "a")
             });
     }
 
     [Fact]
-    public void VarSubUnaryAddVarTest()
+    public void VarAddUnarySubVarTest()
     {
         var (len, node) = LineParser.ParseExpression("a+-b");
         Assert.Equal(len, 4);
@@ -175,7 +175,7 @@ public class ParseExpressionTest
                 Left = new(Operands.Variable, "a"),
                 Right = new(Operands.Operand, "-")
                 {
-                    Left = new(Operands.Variable, "b")
+                    Right = new(Operands.Variable, "b")
                 }
             });
     }
@@ -188,13 +188,13 @@ public class ParseExpressionTest
         Assert.Equivalent(node,
             new Node(Operands.Operand, "+")
             {
-                Left = new(Operands.Operand, "-")
+                Right = new(Operands.Operand, "-")
                 {
-                    Left = new(Operands.Operand, "+")
+                    Right = new(Operands.Operand, "+")
                     {
-                        Left = new(Operands.Operand, "-")
+                        Right = new(Operands.Operand, "-")
                         {
-                            Left = new(Operands.Variable, "a")
+                            Right = new(Operands.Variable, "a")
                         }
                     }
                 }
@@ -378,6 +378,19 @@ public class ParseExpressionTest
                     },
                     Right = new(Operands.Number, 4)
                 },
+            });
+    }
+
+    [Fact]
+    public void UnaryAddMulAnarySubTest()
+    {
+        var (len, node) = LineParser.ParseExpression("+2*-3");
+        Assert.Equal(len, 5);
+        Assert.Equivalent(node,
+            new Node(Operands.Operand, "*")
+            {
+                Left = new(Operands.Operand, "+") { Right = new(Operands.Number, 2) },
+                Right = new(Operands.Operand, "-") { Right = new(Operands.Number, 3) },
             });
     }
 
