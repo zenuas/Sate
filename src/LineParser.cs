@@ -2,6 +2,7 @@
 using Sate.Expression;
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Sate;
@@ -292,6 +293,9 @@ public static class LineParser
         var ope_len = TryParseOperator(line, start + len, out var ope);
         if (ope_len > 0) return (len + ope_len, new(Operands.Operand, ope));
 
+        var str_len = TryParseString(line, start + len, out var str);
+        if (str_len > 0) return (len + str_len, new(Operands.String, str));
+
         var var_len = TryParseVariable(line, start + len, out var name);
         if (var_len > 0)
         {
@@ -338,6 +342,42 @@ public static class LineParser
         {
             ope = c.ToString();
             return 1;
+        }
+        return 0;
+    }
+
+    public static int TryParseString(string line, int start, out string str)
+    {
+        str = "";
+        if (start >= line.Length) return 0;
+
+        var q = line[start];
+        var s = new StringBuilder();
+        if (q == '"' || q == '\'')
+        {
+            var len = 1;
+            while (true)
+            {
+                if (start + len >= line.Length) return 0;
+                var c = line[start + len++];
+                if (c == q) break;
+                else if (c == '\\')
+                {
+                    if (start + len >= line.Length) return 0;
+                    c = line[start + len++] switch
+                    {
+                        '\'' => '\'',
+                        '"' => '"',
+                        'r' => '\r',
+                        'n' => '\n',
+                        't' => '\t',
+                        _ => throw new Exception($"invalid string escape"),
+                    };
+                }
+                s.Append(c);
+            }
+            str = s.ToString();
+            return len;
         }
         return 0;
     }

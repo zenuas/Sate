@@ -1,5 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Sate.Block;
+using Sate.Expression;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -53,13 +55,13 @@ namespace {{ns_name}}
 {
     public static class {{class_name}}
     {
-        public static string Build(dynamic _)
+        public static string Build(dynamic @arg)
         {
-            var s = new System.Text.StringBuilder();
+            var @s = new System.Text.StringBuilder();
 """);
         OutputSources(src, 3, blocks);
         src.AppendLine("""
-            return s.ToString();
+            return @s.ToString();
         }
     }
 }
@@ -75,11 +77,11 @@ namespace {{ns_name}}
         {
             if (block is StaticBlock s)
             {
-                src.AppendLine($"{sp}s.AppendLine(@\"{s.Value}\");");
+                src.AppendLine($"{sp}@s.AppendLine(@\"{s.Value}\");");
             }
             else if (block is IfBlock ifs)
             {
-                src.AppendLine($"{sp}if (true /*{ifs.Condition}*/)");
+                src.AppendLine($"{sp}if ({OutputExpression(ifs.Condition)})");
                 src.AppendLine($"{sp}{{");
                 OutputSources(src, indent + 1, ifs.Then);
                 src.AppendLine($"{sp}}}");
@@ -93,5 +95,32 @@ namespace {{ns_name}}
                 }
             }
         }
+    }
+
+    public static string OutputExpression(string expr) => OutputExpression(LineParser.ParseExpression(expr).Node);
+
+    public static string OutputExpression(Node node)
+    {
+        switch (node.Operand)
+        {
+            case Operands.LeftParenthesis:
+                return $"({OutputExpression(node.Left!)})";
+
+            case Operands.Operand:
+                return LineParser.IsUnaryOperator(node)
+                    ? $"{node.Value}{OutputExpression(node.Right!)}"
+                    : $"{OutputExpression(node.Left!)} {node.Value} {OutputExpression(node.Right!)}";
+
+            case Operands.Number:
+                return node.Value.ToString();
+
+            case Operands.Variable:
+                var v = node.Value.ToString();
+                return $"@arg.{(LineParser.IsVariablePrefix(v[0]) ? v.Substring(1) : v)}";
+
+            case Operands.String:
+                return $"\"{node.Value}\"";
+        }
+        throw new Exception();
     }
 }

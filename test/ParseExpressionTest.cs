@@ -395,6 +395,19 @@ public class ParseExpressionTest
     }
 
     [Fact]
+    public void VarEqStr()
+    {
+        var (len, node) = LineParser.ParseExpression("s==''");
+        Assert.Equal(len, 5);
+        Assert.Equivalent(node,
+            new Node(Operands.Operand, "==")
+            {
+                Left = new(Operands.Variable, "s"),
+                Right = new(Operands.String, ""),
+            });
+    }
+
+    [Fact]
     public void ErrorTest()
     {
         Assert.Equal(Assert.Throws<Exception>(() => LineParser.ParseExpression("*a")).Message, "unexpected operator *");
