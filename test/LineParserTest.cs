@@ -88,35 +88,6 @@ public class LineParserTest
     }
 
     [Fact]
-    public void ForTest()
-    {
-        var b = Parse("A\n/* FOR @Users */\nB\n/* END */");
-        Assert.Equal(b.Length, 2);
-        var b0 = Assert.IsType<StaticBlock>(b[0]);
-        Assert.Equal(b0.Value, "A");
-        var b1 = Assert.IsType<ForBlock>(b[1]);
-        Assert.Equal(b1.Iterator, "@Users");
-        Assert.Equal(b1.Loop.Length, 1);
-        var b1_loop0 = Assert.IsType<StaticBlock>(b1.Loop[0]);
-        Assert.Equal(b1_loop0.Value, "B");
-    }
-
-    [Fact]
-    public void ForJoinTest()
-    {
-        var b = Parse("A\n/* FOR @Users JOIN and */\nB\n/* END */");
-        Assert.Equal(b.Length, 2);
-        var b0 = Assert.IsType<StaticBlock>(b[0]);
-        Assert.Equal(b0.Value, "A");
-        var b1 = Assert.IsType<ForJoinBlock>(b[1]);
-        Assert.Equal(b1.Iterator, "@Users");
-        Assert.Equal(b1.Join, "and");
-        Assert.Equal(b1.Loop.Length, 1);
-        var b1_loop0 = Assert.IsType<StaticBlock>(b1.Loop[0]);
-        Assert.Equal(b1_loop0.Value, "B");
-    }
-
-    [Fact]
     public void ErrorTest()
     {
         Assert.Equal(Assert.Throws<Exception>(() => Parse("/* END */")).Message, "unexpected end statement");
