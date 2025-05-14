@@ -14,10 +14,10 @@ public static class LineParser
     public static Regex ElseIfStatement = new(@"^\s*/\*\s*ELSE\s+IF\s+(.+)\*/\s*$", RegexOptions.IgnoreCase);
     public static Regex EndStatement = new(@"^\s*/\*\s*END\s*\*/\s*$", RegexOptions.IgnoreCase);
 
-    public static HashSet<string> ReservedString { get; } = new()
+    public static Dictionary<string, string> ReservedString { get; } = new()
         {
-            { "OR" },
-            { "AND" },
+            { "OR", "||" },
+            { "AND", "&&" },
         };
 
     public static IEnumerable<IBlock> ParseTopLevel(string[] lines)
@@ -219,11 +219,10 @@ public static class LineParser
         var var_len = TryParseVariable(line, start + len, out var name);
         if (var_len > 0)
         {
-            var upper = name.ToUpper();
             return (
                 len + var_len,
-                ReservedString.Contains(upper) ?
-                    new(Operands.Operand, upper) :
+                ReservedString.TryGetValue(name.ToUpper(), out var value) ?
+                    new(Operands.Operand, value) :
                     new(Operands.Variable, name)
             );
         }
@@ -244,6 +243,13 @@ public static class LineParser
         {
             // == or !=
             if (start + 1 >= line.Length || !IsEqualOperator(line[start + 1])) throw new Exception($"unexpected operator {c}");
+            ope = line.Substring(start, 2);
+            return 2;
+        }
+        else if (IsAndOperator(c) || IsOrOperator(c))
+        {
+            // && or ||
+            if (start + 1 >= line.Length || line[start + 1] != c) throw new Exception($"unexpected operator {c}");
             ope = line.Substring(start, 2);
             return 2;
         }
@@ -369,6 +375,12 @@ public static class LineParser
     public static bool IsNotOperator(char c) =>
         c == '!';
 
+    public static bool IsOrOperator(char c) =>
+        c == '|';
+
+    public static bool IsAndOperator(char c) =>
+        c == '&';
+
     public static bool IsOperator(char c) =>
         c == '+' ||
         c == '-' ||
@@ -377,8 +389,8 @@ public static class LineParser
         c == '%';
 
     public static int GetOperatorPriority(string ope) =>
-        ope == "OR" ? 1 :
-        ope == "AND" ? 2 :
+        ope == "||" ? 1 :
+        ope == "&&" ? 2 :
         ope == "==" ? 3 :
         ope == "!=" ? 3 :
         ope == "<" ? 4 :

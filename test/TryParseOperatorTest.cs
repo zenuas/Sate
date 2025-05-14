@@ -237,6 +237,22 @@ public class TryParseOperatorTest
     }
 
     [Fact]
+    public void AndTest()
+    {
+        var len = LineParser.TryParseOperator("&&", 0, out var ope);
+        Assert.Equal(len, 2);
+        Assert.Equal(ope, "&&");
+    }
+
+    [Fact]
+    public void OrTest()
+    {
+        var len = LineParser.TryParseOperator("||", 0, out var ope);
+        Assert.Equal(len, 2);
+        Assert.Equal(ope, "||");
+    }
+
+    [Fact]
     public void Equality1Test()
     {
         Assert.Equal(Assert.Throws<Exception>(() => LineParser.TryParseOperator("=", 0, out var ope)).Message, "unexpected operator =");
