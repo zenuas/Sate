@@ -119,8 +119,10 @@ namespace {{ns_name}}
                 return $"@arg.{(LineParser.IsVariablePrefix(v[0]) ? v.Substring(1) : v)}";
 
             case Operands.String:
-                return $"\"{node.Value}\"";
+                return $"\"{EscapeString(node.Value.ToString())}\"";
         }
         throw new Exception();
     }
+
+    public static string EscapeString(string s) => s.Replace("\"", "\\\"");
 }
