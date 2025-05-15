@@ -12,9 +12,16 @@ public class GeneratorBench
     }
 
     [Benchmark(Description = "Sate(dynamic)")]
-    public void SateBench()
+    public void Sate1Bench()
     {
         _ = SateTest.Build(new { Name = "John Does", Age = 10 });
+    }
+
+
+    [Benchmark(Description = "Sate(static)")]
+    public void Sate2Bench()
+    {
+        _ = SateTest.Build(new() { Name = "John Does", Age = 10 });
     }
 
     [Benchmark(Description = "Razor(Run)")]

@@ -55,13 +55,50 @@ namespace {{ns_name}}
 {
     public static class {{class_name}}
     {
-        public static string Build(dynamic @arg)
+        public static string Build(IParameter @arg)
         {
             var @s = new System.Text.StringBuilder();
 """);
-        OutputSources(src, 3, blocks);
+        var parameters = new Dictionary<string, Type?>();
+        OutputSources(src, 3, blocks, parameters);
         src.AppendLine("""
             return @s.ToString();
+        }
+
+        public static string Build(Parameter @arg) => Build((IParameter)@arg);
+
+        public static string Build(dynamic @arg)
+        {
+            var @param = new Parameter()
+            {
+""");
+        foreach (var kv in parameters)
+        {
+            src.AppendLine($"                {kv.Key} = @arg.{kv.Key},");
+        }
+        src.AppendLine("""
+            };
+            return Build((IParameter)@param);
+        }
+
+        public interface IParameter
+        {
+""");
+        foreach (var kv in parameters)
+        {
+            src.AppendLine($"            public {kv.Value!.FullName} {kv.Key} {{ get; init; }}");
+        }
+        src.AppendLine("""
+        }
+
+        public class Parameter : IParameter
+        {
+""");
+        foreach (var kv in parameters)
+        {
+            src.AppendLine($"            public {(kv.Value!.IsClass ? "required " : "")}{kv.Value!.FullName} {kv.Key} {{ get; init; }}");
+        }
+        src.AppendLine("""
         }
     }
 }
@@ -69,7 +106,7 @@ namespace {{ns_name}}
         return src.ToString();
     }
 
-    public static void OutputSources(StringBuilder src, int indent, IEnumerable<IBlock> blocks)
+    public static void OutputSources(StringBuilder src, int indent, IEnumerable<IBlock> blocks, Dictionary<string, Type?> parameters)
     {
         var sp = new string(' ', indent * 4);
 
@@ -81,45 +118,112 @@ namespace {{ns_name}}
             }
             else if (block is IfBlock ifs)
             {
-                src.AppendLine($"{sp}if ({OutputExpression(ifs.Condition)})");
+                src.AppendLine($"{sp}if ({OutputExpression(ifs.Condition, parameters)})");
                 src.AppendLine($"{sp}{{");
-                OutputSources(src, indent + 1, ifs.Then);
+                OutputSources(src, indent + 1, ifs.Then, parameters);
                 src.AppendLine($"{sp}}}");
 
                 if (ifs.Else.Length > 0)
                 {
                     src.AppendLine($"{sp}else");
                     src.AppendLine($"{sp}{{");
-                    OutputSources(src, indent + 1, ifs.Else);
+                    OutputSources(src, indent + 1, ifs.Else, parameters);
                     src.AppendLine($"{sp}}}");
                 }
             }
         }
     }
 
-    public static string OutputExpression(string expr) => OutputExpression(LineParser.ParseExpression(expr).Node);
+    public static string OutputExpression(string expr, Dictionary<string, Type?> parameters) => OutputExpression(LineParser.ParseExpression(expr).Node, parameters);
 
-    public static string OutputExpression(Node node)
+    public static string OutputExpression(Node node, Dictionary<string, Type?> parameters, Type? type = null)
     {
         switch (node.Operand)
         {
             case Operands.LeftParenthesis:
-                return $"({OutputExpression(node.Left!)})";
+                {
+                    var s = $"({OutputExpression(node.Left!, parameters, type)})";
+                    return s;
+                }
 
             case Operands.Operand:
-                return LineParser.IsUnaryOperator(node)
-                    ? $"{node.Value}{OutputExpression(node.Right!)}"
-                    : $"{OutputExpression(node.Left!)} {node.Value} {OutputExpression(node.Right!)}";
+                {
+                    var s = LineParser.IsUnaryOperator(node)
+                        ? $"{node.Value}{OutputExpression(node.Right!, parameters, typeof(int))}"
+                        : $"{OutputExpression(node.Left!, parameters, type)} {node.Value} {OutputExpression(node.Right!, parameters, type)}";
+
+                    if (node.Left?.Operand == Operands.Variable)
+                    {
+                        var name = node.Left.Value.ToString();
+                        if (type is { })
+                        {
+                            EvaluateType(name, type, parameters);
+                        }
+                        else
+                        {
+                            EvaluateType(name, node.Right!, parameters);
+                        }
+                    }
+                    if (node.Right?.Operand == Operands.Variable)
+                    {
+                        var name = node.Right.Value.ToString();
+                        if (type is { })
+                        {
+                            EvaluateType(name, type, parameters);
+                        }
+                        else
+                        {
+                            EvaluateType(name, node.Left!, parameters);
+                        }
+                    }
+                    return s;
+                }
 
             case Operands.Number:
                 return node.Value.ToString();
 
             case Operands.Variable:
-                var v = node.Value.ToString();
-                return $"@arg.{(LineParser.IsVariablePrefix(v[0]) ? v.Substring(1) : v)}";
+                {
+                    var v = node.Value.ToString();
+                    var name = LineParser.IsVariablePrefix(v[0]) ? v.Substring(1) : v;
+                    if (!parameters.ContainsKey(name)) parameters.Add(name, null);
+                    return $"@arg.{name}";
+                }
 
             case Operands.String:
                 return $"\"{EscapeString(node.Value.ToString())}\"";
+        }
+        throw new Exception();
+    }
+
+    public static Type? EvaluateType(string name, Type type, Dictionary<string, Type?> parameters)
+    {
+        var p = LineParser.IsVariablePrefix(name[0]) ? name.Substring(1) : name;
+        return parameters[p] = type;
+    }
+
+    public static Type? EvaluateType(string name, Node node, Dictionary<string, Type?> parameters)
+    {
+        switch (node.Operand)
+        {
+            case Operands.LeftParenthesis:
+                return EvaluateType(name, node.Left!, parameters);
+
+            case Operands.Operand:
+                return node.Left is { } left
+                    ? EvaluateType(name, left, parameters) ?? EvaluateType(name, node.Right!, parameters)
+                    : EvaluateType(name, node.Right!, parameters);
+
+            case Operands.Number:
+                return EvaluateType(name, typeof(int), parameters);
+
+            case Operands.Variable:
+                return parameters.TryGetValue(name, out var t) && t is { }
+                    ? EvaluateType(name, t, parameters)
+                    : null;
+
+            case Operands.String:
+                return EvaluateType(name, typeof(string), parameters);
         }
         throw new Exception();
     }

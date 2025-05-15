@@ -12,6 +12,8 @@ config.AddColumnProvider(DefaultColumnProviders.Instance);
 config.WithOption(ConfigOptions.DisableOptimizationsValidator, true);
 BenchmarkRunner.Run(typeof(Program).Assembly, config, args);
 #else
-var config = DefaultConfig.Instance;
+var config = ManualConfig
+    .Create(DefaultConfig.Instance)
+    .WithOptions(ConfigOptions.DisableOptimizationsValidator);
 BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args, config);
 #endif
