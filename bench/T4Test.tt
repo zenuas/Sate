@@ -1,0 +1,21 @@
+﻿﻿<#@ template language="C#" inherits="T4Base" #>
+/*
+	SQL文サンプル
+*/
+select *
+from Dummy
+where 1 = 1
+
+<# if (Name != "")
+{ #>
+and   Name = @Name
+<# } #>
+
+<# if (Age >= 20) 
+{ #>
+and   Age = @Age
+<# } #>
+
+order by
+	Id,
+	Name

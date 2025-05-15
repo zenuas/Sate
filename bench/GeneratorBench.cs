@@ -17,11 +17,16 @@ public class GeneratorBench
         _ = SateTest.Build(new { Name = "John Does", Age = 10 });
     }
 
-
     [Benchmark(Description = "Sate(static)")]
     public void Sate2Bench()
     {
         _ = SateTest.Build(new() { Name = "John Does", Age = 10 });
+    }
+
+    [Benchmark(Description = "T4")]
+    public void T4Bench()
+    {
+        _ = new T4Test { Name = "John Does", Age = 10 }.TransformText();
     }
 
     [Benchmark(Description = "Razor(Run)")]
